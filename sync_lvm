@@ -1,0 +1,73 @@
+#!/bin/bash
+
+SCRIPT=to_run.$$
+
+usage () {
+	echo "$0 must be call with source and destination like : "
+	echo "$0 host:/dev/vg_source/lv_source /dev/vg_dest/lv_dest"
+	go_out 1
+}
+
+go_out () {
+	rm -f $SCRIPT
+
+	[ -n "${1:-}" ] && EXIT="${1}" || EXIT=0
+	[ -n "${2:-}" ] && echo "$2" >&2
+	exit $EXIT
+}
+
+trap go_out 1 2 3 6 9 14 15
+
+[ -n "${1:-}" ] && SRC=${1} || usage
+[ -n "${2:-}" ] && DEST=${2} || usage
+
+LV_SRC=$(echo $SRC| cut -f 4 -d '/')
+VG_SRC=$(echo $SRC| cut -f 3 -d '/')
+SRV_SRC=$(echo $SRC| cut -f 1 -d ':')
+
+LV_DEST=$(echo $DEST| cut -f 4 -d '/')
+VG_DEST=$(echo $DEST| cut -f 3 -d '/')
+
+# build a temporary script will be run on remote host ...
+cat > /tmp/$SCRIPT <<EOF
+#!/bin/bash
+set -x
+go_out () {
+	#find all "snapshot" and remove it
+	for snap in $(lvscan  | grep snapshot | cut -f 2 -d "'")
+	do
+		umount $snap
+		lvremove -f $snap
+	done
+
+	[ -n "${1:-}" ] && EXIT="${1}" || EXIT=0
+	[ -n "${2:-}" ] && echo "$2" >&2
+	exit $EXIT
+}
+
+trap go_out 1 2 3 6 9 14 15
+
+lvcreate -s -n ${LV_SRC}-snapshot -L 200M /dev/${VG_SRC}/${LV_SRC}
+mount /dev/${VG_SRC}/${LV_SRC}-snapshot /mnt
+EOF
+
+scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/ || go_out 1 "faild to copy firts script on ${SRV_SRC}"
+ssh ${SRV_SRC} /bin/bash /tmp/${SCRIPT} ||  go_out 1 "faild to exec firts script on ${SRV_SRC}"
+
+# find mount point of LV_DEST : 
+mount_point=$(df -P | grep ${VG_DEST} | grep ${LV_DEST} | awk '{print $6}')
+rsync -a --delete --numeric-ids ${SRV_SRC}:/mnt/ $mount_point/ 
+
+# build a script will be run on remote host, to remove snapshot
+cat > /tmp/${SCRIPT} <<EOF
+#!/bin/bash
+set -x
+umount /mnt
+lvremove -f /dev/${VG_SRC}/${LV_SRC}-snapshot
+EOF
+
+
+scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/
+ssh root@${SRV_SRC} /bin/bash /tmp/${SCRIPT}
+
+go_out 0
