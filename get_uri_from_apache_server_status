@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#
+# This script can extract all curently processed URL in Write or Read status in
+# apache. It can be use to count the more active requests at a specific time.
+# For example, you can pipe the output like that :
+# for srv in front1 front2 front3; do ./get_uri_from_apache_server_status http://$srv; done | sort | uniq -c
+#
+
+trap end_of_script 1 2 3 6 9 14 15
+
+end_of_script () {
+	[ -n "${1:-}" ] && EXIT="${1}" || EXIT=0
+	[ -n "${2:-}" ] && echo "$2" >&2
+	exit $EXIT
+}
+
+
+[ -n "${1:-}" ] && URL="${1}" || end_of_script 1 "Missing starting URL : $0 http://example.com"
+
+links -dump $URL/server-status/ -width 512 | awk '$4 == "W" || $4 == "R" {print $4" "$12" "$14}' 
