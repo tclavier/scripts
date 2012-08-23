@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# This script can very quikly rename a full tree with filename encoded in bad charset in UTF-8
+
+FROM=CP850
+TO=UTF-8
+#DEBUG=echo
+
+declare -a del
+
+IFS_OLD=$IFS
+IFS=$'\n'
+for old in $(find . -print)
+do
+  new=$(echo $old|iconv -f $FROM -t $TO)
+  if [ -d $old ]
+  then
+    $DEBUG mkdir -p $new
+    del=("${del[@]}" "$old")
+  fi
+  [ -f $old ] && $DEBUG mv "$old" "$new"
+done
+IFS=$IFS_OLD
+
+for i in ${!del[*]}
+do
+  rep="${del[$i]}"
+  if [ -d "$rep" ] 
+  then 
+    [ "$rep" != "." ] && $DEBUG rm -rf "$rep"
+  fi
+done
