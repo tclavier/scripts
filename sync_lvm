@@ -66,7 +66,6 @@ umount /mnt
 lvremove -f /dev/${VG_SRC}/${LV_SRC}-snapshot
 EOF
 
-
 scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/
 ssh root@${SRV_SRC} /bin/bash /tmp/${SCRIPT}
 
