@@ -1,0 +1,13 @@
+#!/bin/bash
+RED="\033[31m"
+GREEN="\033[32m"
+RESET="\033[0m"
+for vm in $(lxc-ls)
+do
+  state=$(lxc-info -s -n $vm)
+  state=$(echo $state| sed -e 's/.*:\ *//')
+  pid=$(lxc-info -p -n $vm)
+  pid=$(echo $pid| sed -e 's/.*:\ *//')
+  [ $state == 'STOPPED' ] && COLOR=$RED || COLOR=$GREEN
+  echo -e "$COLOR$vm : $state ($pid)$RESET"
+done
