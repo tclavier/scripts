@@ -5,11 +5,8 @@
 #       <description of the *service*>
 #       <any general comments about this init script>
 #
-# <tags -- see below for tag definitions.  *Every line* from the top
-#  of the file to the end of the tags section must begin with a #
-#  character.  After the tags section, there should be a blank line.
-#  This keeps normal comments in the rest of the file from being
-#  mistaken for tags, should they happen to fit the pattern.>
+# chkconfig:   2345 95 95
+# description: <description of the service>
 
 #
 # To unable this service you can use
