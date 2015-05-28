@@ -5,6 +5,22 @@ end_of_script () {
   [ -n "${2:-}" ] && echo "$2" >&2
   exit $EXIT
 }
+apt-get install -y curl
+dpkg -l > /root/debs
+ls /home > /root/lshome
 
+tar -czv --ignore-failed-read \
+  /etc/apache2 \
+  /etc/locale.gen \
+  /etc/machine-id \
+  /etc/munin \
+  /etc/network/interfaces \
+  /etc/passwd \
+  /etc/sudoers \
+  /home/fanchon/.ssh \
+  /root/.ssh \
+  /root/controletp.md \
+  /root/debs \
+  /root/lshome \
+  /var/log/auth.log \
 
-tar -czv /etc/machine-id /root/controletp.md 
