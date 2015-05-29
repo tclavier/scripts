@@ -5,7 +5,7 @@ end_of_script () {
   [ -n "${2:-}" ] && echo "$2" >&2
   exit $EXIT
 }
-apt-get install -y curl
+apt-get install -y gzip tar
 dpkg -l > /root/debs
 ls /home > /root/lshome
 
