@@ -10,6 +10,7 @@ dpkg -l > /root/debs
 ls /home > /root/lshome
 
 tar -czv --ignore-failed-read \
+  /etc/apt \
   /etc/apache2 \
   /etc/locale.gen \
   /etc/machine-id \
