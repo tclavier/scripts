@@ -18,7 +18,6 @@ tar -czvf /tmp/ctp.tgz --ignore-failed-read \
   /etc/passwd \
   /etc/sudoers \
   /home \
-  /home/fanchon/.ssh \
   /root/.ssh \
   /root/controletp.md \
   /root/debs \
