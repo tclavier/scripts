@@ -56,6 +56,7 @@ ssh ${SRV_SRC} /bin/bash /tmp/${SCRIPT} ||  go_out 1 "faild to exec firts script
 
 # find mount point of LV_DEST : 
 mount_point=$(df -P | grep ${VG_DEST} | grep ${LV_DEST} | awk '{print $6}')
+[ -z "$mount_point" ] && go_out 1 "Missing ${VG_DEST}/${LV_DEST}"
 rsync -a --delete --numeric-ids ${SRV_SRC}:/mnt/ $mount_point/ 
 
 # build a script will be run on remote host, to remove snapshot
