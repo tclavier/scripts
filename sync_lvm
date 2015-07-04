@@ -9,7 +9,19 @@ usage () {
 }
 
 go_out () {
+  # build a script will be run on remote host, to remove snapshot
+  cat > /tmp/${SCRIPT} <<EOF
+#!/bin/bash
+set -x
+umount /dev/${VG_SRC}/${LV_SRC}-snapshot
+lvremove -f /dev/${VG_SRC}/${LV_SRC}-snapshot
+EOF
+
+  scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/
+  ssh root@${SRV_SRC} /bin/bash /tmp/${SCRIPT}
+
 	rm -f $SCRIPT
+  ssh root@${SRV_SRC} rm -f /tmp/$SCRIPT
 
 	[ -n "${1:-}" ] && EXIT="${1}" || EXIT=0
 	[ -n "${2:-}" ] && echo "$2" >&2
@@ -28,7 +40,8 @@ SRV_SRC=$(echo $SRC| cut -f 1 -d ':')
 LV_DEST=$(echo $DEST| cut -f 4 -d '/')
 VG_DEST=$(echo $DEST| cut -f 3 -d '/')
 
-# build a temporary script will be run on remote host ...
+# build a temporary script will be run on remote host
+# to make snapshot
 cat > /tmp/$SCRIPT <<EOF
 #!/bin/bash
 set -x
@@ -36,6 +49,7 @@ go_out () {
 	#find all "snapshot" and remove it
 	for snap in $(lvscan  | grep snapshot | cut -f 2 -d "'")
 	do
+    echo "Remove $snap"
 		umount $snap
 		lvremove -f $snap
 	done
@@ -47,27 +61,21 @@ go_out () {
 
 trap go_out 1 2 3 6 9 14 15
 
-lvcreate -s -n ${LV_SRC}-snapshot -L 200M /dev/${VG_SRC}/${LV_SRC}
+lvcreate -s -n ${LV_SRC}-snapshot -L 400M /dev/${VG_SRC}/${LV_SRC}
 mount /dev/${VG_SRC}/${LV_SRC}-snapshot /mnt
 EOF
 
 scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/ || go_out 1 "faild to copy firts script on ${SRV_SRC}"
-ssh ${SRV_SRC} /bin/bash /tmp/${SCRIPT} ||  go_out 1 "faild to exec firts script on ${SRV_SRC}"
+ssh ${SRV_SRC} /bin/bash /tmp/${SCRIPT} ||  go_out 1 "faild to exec /tmp/${SCRIPT} on ${SRV_SRC}"
 
 # find mount point of LV_DEST : 
 mount_point=$(df -P | grep ${VG_DEST} | grep ${LV_DEST} | awk '{print $6}')
-[ -z "$mount_point" ] && go_out 1 "Missing ${VG_DEST}/${LV_DEST}"
+if [ -z "$mount_point" ] 
+then
+  umount /mnt
+  mount /dev/${VG_DEST}/${LV_DEST} /mnt || go_out 1 "Can't mount /dev/${VG_DEST}/${LV_DEST}"
+  mount_point=/mnt
+fi
 rsync -a --delete --numeric-ids ${SRV_SRC}:/mnt/ $mount_point/ 
-
-# build a script will be run on remote host, to remove snapshot
-cat > /tmp/${SCRIPT} <<EOF
-#!/bin/bash
-set -x
-umount /mnt
-lvremove -f /dev/${VG_SRC}/${LV_SRC}-snapshot
-EOF
-
-scp /tmp/${SCRIPT} ${SRV_SRC}:/tmp/
-ssh root@${SRV_SRC} /bin/bash /tmp/${SCRIPT}
 
 go_out 0
